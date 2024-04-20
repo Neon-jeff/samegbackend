@@ -55,7 +55,7 @@ class Login(APIView):
 
 class CreateProperty(APIView):
     authentication_classes=[TokenAuthentication]
-    permission_classes=[IsAdminUser]
+    permission_classes=[IsAuthenticated]
     parser_classes=[MultiPartParser,FormParser]
     def get(self,request):
         _s=PropertySerializer(Property.objects.all(),many=True)

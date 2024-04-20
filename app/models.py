@@ -29,7 +29,7 @@ class User_Property(models.Model):
     size_bought=models.CharField(null=True,blank=True,max_length=400)
     property_document=models.URLField(null=True,blank=True)
     property_amount=models.IntegerField(null=True,blank=True)
-    paid_amount=models.BooleanField(default=False,null=True,blank=True)
+    paid_amount=models.IntegerField(default=0,null=True,blank=True)
     images=ArrayField(models.URLField(),null=True,blank=True)
 
 # class UserPropertyImage(models.Model):
