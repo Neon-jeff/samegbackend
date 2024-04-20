@@ -28,7 +28,7 @@ SECRET_KEY = 'django-insecure-c9jwtoxf#+#$-28kb7$(rp^2evu9@tq13we3!(if!a&^el!nh(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -94,6 +94,9 @@ DATABASES = {
     'default':dj_database_url.parse(env('DB_URL'))
 }
 
+# cors settings
+CORS_ALLOW_ALL_ORIGINS=True
+
 
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
@@ -147,3 +150,4 @@ STATICFILES_DIRS = [
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
