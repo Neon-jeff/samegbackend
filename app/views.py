@@ -60,6 +60,8 @@ class CreateProperty(APIView):
     def get(self,request):
         _s=PropertySerializer(Property.objects.all(),many=True)
         return Response({"properties":_s.data},status=200)
+    
+
     def post(self,request):
         _s=CreatePropertySerializer(data=request.data)
         if not _s.is_valid():
@@ -76,6 +78,20 @@ class CreateProperty(APIView):
             image=image_url
         )
         return Response({"data":'Property Created'},status=201)
+
+class GetOneProperty(APIView):
+    def get(self,request,pk):
+        property_obj=Property.objects.filter(id=pk).first()
+        if property_obj is None:
+            return Response({"data":"No property found"},status=404)
+        serializer=PropertySerializer(property_obj,many=False)
+        return Response(serializer.data) 
+    def patch(self,request,pk):
+        property_obj=Property.objects.get(id=pk)
+        serializer=PropertySerializer(property_obj,data=request.data,partial=True)
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            return Response(serializer.data) 
 
 class CreateUserProperty(APIView):
     authentication_classes=[TokenAuthentication]
@@ -103,9 +119,9 @@ class CreateUserProperty(APIView):
         return Response({"data":"User Property Creation Successful"},status=201)
 
 
-class GetUser(APIView):
+class GetAllUser(APIView):
     authentication_classes = [TokenAuthentication]
-    permission_classes=[IsAuthenticated]
+    permission_classes=[IsAdminUser]
     def get(self,request):
         user=request.user
         user_serializer=UserSerializer(user)
@@ -121,8 +137,8 @@ class GetProfile(APIView):
         return Response({"user":{**_s.data,**serializer.data}})
 
     def patch(self,request):
-        profile_obj=UserProfile.objects.get(user=request.user)
-        serializer=ProfileSerializer(profile_obj,data=request.data,partial=True)
+        profile_obj=User.objects.get(user=request.user)
+        serializer=User(profile_obj,data=request.data,partial=True)
         if serializer.is_valid(raise_exception=True):
             serializer.save()
             return Response(serializer.data)
@@ -133,13 +149,13 @@ class LoginAdmin(APIView):
     def post(self,request):
         _s=AdminUserLogin(data=request.data)
         if not _s.is_valid():
-            raise ValidationError(detail="Invalid Data",code=403)
+            return Response({"error":"Invalid Data"},code=403)
         user=authenticate(username=_s.validated_data['username'],password=_s.validated_data['password'])
         if user is None:
-            raise ValidationError(detail="Invalid Login Credentials",code=403)
+            return Response({"error":"Invalid Login Details"},code=403)
         
         if not user.is_superuser:
-            raise ValidationError(detail="Not an admin user",code=403)
+            return Response({"error":"Not an admin user"},code=403)
 
         if  Token.objects.get(user=user) is  None:
             token=Token.objects.create(user=user)
@@ -167,10 +183,17 @@ class GetOneUserProperty(APIView):
         try:
             user_property_obj=User_Property.objects.get(id=pk)
         except ObjectDoesNotExist:
-            raise ValidationError(detail={"error":"user property does not exist"},code=404)
+            return Response({"error":"user property does not exist"},status=404)
             
         _s=UserPropertySerializer(user_property_obj,many=False)
         return Response({"data":_s.data})
+        
+    def patch(self,request,pk):
+        property_obj=User_Property.objects.get(id=pk)
+        serializer=UserPropertySerializer(property_obj,data=request.data,partial=True)
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            return Response(serializer.data) 
     # def post(self,request,pk):
     #     pass
 
