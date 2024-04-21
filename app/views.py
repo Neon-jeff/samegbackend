@@ -11,7 +11,7 @@ from rest_framework.parsers import MultiPartParser,FormParser
 from rest_framework.authtoken.models import Token
 from rest_framework.validators import ValidationError,DataError
 import json
-from utils.upload import upload_image,upload_document
+from utils.upload import upload_image,upload_document,upload_user_property_image
 from utils.temp_file import  create_temp_path
 # Create your views here.
 
@@ -67,17 +67,19 @@ class CreateProperty(APIView):
         if not request.user.is_superuser:
             return Response({"error":"User Not Authorised"})
         if not _s.is_valid():
-            raise ValidationError(detail="Invalid Data",code=403)
-
-        image_path=create_temp_path(request.FILES['image'])['path']
-        image_name=create_temp_path(request.FILES['image'])['name']
+            return Response({"detail":"Invalid Data"},status=403)
+        path_dict=create_temp_path(request.FILES['image'])
+        image_path=path_dict['path']
+        image_name=path_dict['name']
         # upload image to boto3
         image_url=upload_image(image_path,image_name)
         Property.objects.create(
             location=request.data['location'],
             title=request.data['title'],
             description=request.data['description'],
-            image=image_url
+            image=image_url,
+            price=request.data['price'],
+            size=request.data['size']
         )
         return Response({"data":'Property Created'},status=201)
 
@@ -104,20 +106,32 @@ class CreateUserProperty(APIView):
         if not _s.is_valid():
             raise ValidationError(detail="Invalid Data",code=403)
         document_url=None
+        image_list=[]
         if request.FILES.get('document') is not None:
-            document_path=create_temp_path(request.FILES['document'])['path']
-            document_name=create_temp_path(request.FILES['document'])['name']  
+            path_dict=create_temp_path(request.FILES['document'])
+            document_path=path_dict['path']
+            document_name=path_dict['name']  
             document_url=upload_document(document_path,document_name)
-
+        if request.FILES.get('images') is not None:
+            for file in request.FILES.get('images'):
+                path_dict=create_temp_path(file)
+                image_path=path_dict['path']
+                image_name=path_dict['name']
+                image_url=upload_user_property_image(image_path,image_name)
+                image_list.append(image_url)
         User_Property.objects.create(
             user=User.objects.get(id=_s.validated_data['user_id']),
             property=Property.objects.get(id=_s.validated_data['property_id']),
-            property_document=document_url
+            property_document=document_url,
+            size_bought=_s.validated_data['size_bought'],
+            paid_amount=_s.validated_data['paid_amount'],
+            property_amount=_s.validated_data['property_amount'],
+            images=image_list if len(image_list)>0 else None
+
         )
         User.objects.get(id=_s.validated_data['user_id']).profile.is_property_owner=True
         User.objects.get(id=_s.validated_data['user_id']).profile.save()
-        if request.FILES.get('images') is not None:
-            pass
+
         return Response({"data":"User Property Creation Successful"},status=201)
 
 

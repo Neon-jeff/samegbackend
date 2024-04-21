@@ -47,8 +47,11 @@ class LoginSerializer(serializers.Serializer):
 class CreateUserPropertySerializer(serializers.Serializer):
     user_id=serializers.IntegerField()
     property_id=serializers.IntegerField()
-    document=serializers.FileField(required=False)
-
+    # document=serializers.FileField(required=False)
+    property_amount=serializers.IntegerField()
+    paid_amount=serializers.IntegerField()
+    size_bought=serializers.CharField()
+    images=serializers.ListField(child=serializers.FileField(),allow_empty=True)
 
 
 class CreatePropertySerializer(serializers.Serializer):
