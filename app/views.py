@@ -135,6 +135,8 @@ class GetAllUser(APIView):
         return Response({"user":result})
 
 class GetOneUser(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes=[IsAdminUser]
     def get(self,request,pk):
         user=User.objects.filter(id=pk).first()
         if user is None:
