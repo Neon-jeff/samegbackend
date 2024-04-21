@@ -102,9 +102,11 @@ class CreateUserProperty(APIView):
     permission_classes=[IsAdminUser]
     parser_classes=[MultiPartParser,FormParser]
     def post(self,request):
-        _s=CreateUserPropertySerializer(data=request.data)
-        if not _s.is_valid():
-            raise ValidationError(detail="Invalid Data",code=403)
+        request.data['images']=request.data.pop('images[]')
+        # data.pop('images[]',None)
+        # _s=CreateUserPropertySerializer(data=request.data)
+        # if not _s.is_valid():
+        #     raise ValidationError(detail="Invalid Data",code=403)
         document_url=None
         image_list=[]
         if request.FILES.get('document') is not None:
@@ -112,25 +114,25 @@ class CreateUserProperty(APIView):
             document_path=path_dict['path']
             document_name=path_dict['name']  
             document_url=upload_document(document_path,document_name)
-        if request.FILES.get('images') is not None:
-            for file in request.FILES.get('images'):
+        if request.data.get('images') is not None:
+            for file in request.data.get('images'):
                 path_dict=create_temp_path(file)
                 image_path=path_dict['path']
                 image_name=path_dict['name']
                 image_url=upload_user_property_image(image_path,image_name)
                 image_list.append(image_url)
         User_Property.objects.create(
-            user=User.objects.get(id=_s.validated_data['user_id']),
-            property=Property.objects.get(id=_s.validated_data['property_id']),
+            user=User.objects.get(id=request.data['user_id']),
+            property=Property.objects.get(id=request.data['property_id']),
             property_document=document_url,
-            size_bought=_s.validated_data['size_bought'],
-            paid_amount=_s.validated_data['paid_amount'],
-            property_amount=_s.validated_data['property_amount'],
+            size_bought=request.data['size_bought'],
+            paid_amount=request.data['paid_amount'],
+            property_amount=request.data['property_amount'],
             images=image_list if len(image_list)>0 else None
 
         )
-        User.objects.get(id=_s.validated_data['user_id']).profile.is_property_owner=True
-        User.objects.get(id=_s.validated_data['user_id']).profile.save()
+        User.objects.get(id=request.data['user_id']).profile.is_property_owner=True
+        User.objects.get(id=request.data['user_id']).profile.save()
 
         return Response({"data":"User Property Creation Successful"},status=201)
 
