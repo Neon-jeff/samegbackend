@@ -134,6 +134,16 @@ class GetAllUser(APIView):
             result.append(data)
         return Response({"user":result})
 
+class GetOneUser(APIView):
+    def get(self,request,pk):
+        user=User.objects.filter(id=pk).first()
+        if user is None:
+            return Response({"error":"User does not exist"},status=404)
+        
+        serializer=UserSerializer(user,many=False)
+        return Response({"data":serializer.data})
+
+
 class GetProfile(APIView):
     authentication_classes = [TokenAuthentication]
     permission_classes=[IsAuthenticated]

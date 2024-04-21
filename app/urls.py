@@ -13,6 +13,7 @@ urlpatterns = [
     path('create-user-property/',CreateUserProperty.as_view()),
     path('login-admin/',LoginAdmin.as_view()),
     path('property/<int:pk>/',GetOneProperty.as_view()),
-    path('all-users/',GetAllUser.as_view())
+    path('all-users/',GetAllUser.as_view()),
+    path('one-user/<int:pk>/',GetOneUser.as_view())
 
 ]
