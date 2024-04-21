@@ -48,7 +48,7 @@ class CreateUserPropertySerializer(serializers.Serializer):
     user_id=serializers.IntegerField()
     property_id=serializers.IntegerField()
     document=serializers.FileField(required=False)
-    
+
 
 
 class CreatePropertySerializer(serializers.Serializer):
@@ -64,15 +64,16 @@ class PropertySerializer(serializers.ModelSerializer):
         fields='__all__'
 
 class UserSerializer(serializers.ModelSerializer):
+
     class Meta:
         model=User
-        fields=['email','first_name','last_name']
+        fields=['email','first_name','last_name','id']
 
 
 class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model=UserProfile
-        fields='__all__'
+        fields=['is_property_owner']
     
 class AdminUserLogin(serializers.Serializer):
     username=serializers.CharField()

@@ -55,7 +55,7 @@ class Login(APIView):
 
 class CreateProperty(APIView):
     authentication_classes=[TokenAuthentication]
-    permission_classes=[IsAuthenticated]
+    permission_classes=[AllowAny]
     parser_classes=[MultiPartParser,FormParser]
     def get(self,request):
         _s=PropertySerializer(Property.objects.all(),many=True)
@@ -64,6 +64,8 @@ class CreateProperty(APIView):
 
     def post(self,request):
         _s=CreatePropertySerializer(data=request.data)
+        if not request.user.is_superuser:
+            return Response({"error":"User Not Authorised"})
         if not _s.is_valid():
             raise ValidationError(detail="Invalid Data",code=403)
 
@@ -123,9 +125,14 @@ class GetAllUser(APIView):
     authentication_classes = [TokenAuthentication]
     permission_classes=[IsAdminUser]
     def get(self,request):
-        user=request.user
-        user_serializer=UserSerializer(user)
-        return Response({"user":user_serializer.data})
+        result=[]
+        users=User.objects.filter(is_superuser=False)
+        for user in users:
+            _p=ProfileSerializer(UserProfile.objects.get(user=user),many=False)
+            _u=UserSerializer(user,many=False)
+            data={**_u.data,**_p.data}
+            result.append(data)
+        return Response({"user":result})
 
 class GetProfile(APIView):
     authentication_classes = [TokenAuthentication]
