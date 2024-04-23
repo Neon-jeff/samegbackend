@@ -33,6 +33,7 @@ urlpatterns = [
     path('admin/all-users/',GetAllUser.as_view()),
     path('admin/edit-user/<int:pk>/',GetOneUser.as_view()),
     path('admin/edit-user-property/<int:pk>/',EditUserProperty.as_view()),
-    path('admin/edit-property/<int:pk>/',EditProperty.as_view())
+    path('admin/edit-property/<int:pk>/',EditProperty.as_view()),
+    path('admin/user-properties/<int:pk>/',UserPropertyByUserID.as_view())
 
 ]

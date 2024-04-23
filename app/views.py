@@ -296,3 +296,12 @@ class EditProperty(RetrieveUpdateDestroyAPIView):
             delete_files([document_name])
 
         return super().perform_destroy(instance)
+
+class UserPropertyByUserID(APIView):
+    def get(self,request,pk):
+        user=User.objects.filter(id=pk).first()
+        if user is None:
+            return Response({"error":"user does not exist"},status=404)
+        user_properties=User_Property.objects.filter(user=user)
+        _s=UserPropertySerializer(user_properties,many=True)
+        return Response(_s.data,status=200)
