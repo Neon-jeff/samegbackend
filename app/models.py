@@ -24,8 +24,8 @@ class Property(models.Model):
         return f'{self.title} Property'
 
 class User_Property(models.Model):
-    user=models.ForeignKey(User,on_delete=models.CASCADE,blank=False,null=False,related_name='properties')
-    property=models.ForeignKey(Property,on_delete=models.CASCADE,blank=True,null=False)
+    user=models.ForeignKey(User,on_delete=models.CASCADE,blank=True,null=True,related_name='properties')
+    property=models.ForeignKey(Property,on_delete=models.CASCADE,blank=True,null=True)
     size_bought=models.CharField(null=True,blank=True,max_length=400)
     property_document=models.URLField(null=True,blank=True)
     property_amount=models.IntegerField(null=True,blank=True)

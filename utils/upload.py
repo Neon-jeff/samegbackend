@@ -47,3 +47,12 @@ def upload_user_property_image(file_path,file_name):
     object_link=f'https://Samegproperties.s3.us-east-005.backblazeb2.com/user-property-images/{file_name}'
     return object_link
 
+
+def delete_files(keys:list):
+    objects = []
+    for key in keys:
+        objects.append({'Key': key})
+    try:
+        b2.Bucket(env('BUCKET')).delete_objects(Delete={'Objects': objects})
+    except ClientError as ce:
+        print('error', ce)

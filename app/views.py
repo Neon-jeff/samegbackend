@@ -11,8 +11,11 @@ from rest_framework.parsers import MultiPartParser,FormParser
 from rest_framework.authtoken.models import Token
 from rest_framework.validators import ValidationError,DataError
 import json
-from utils.upload import upload_image,upload_document,upload_user_property_image
+from rest_framework.generics import *
+from utils.upload import upload_image,upload_document,upload_user_property_image,delete_files
 from utils.temp_file import  create_temp_path
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 # Create your views here.
 
 # ---API SPECS---
@@ -23,8 +26,6 @@ from utils.temp_file import  create_temp_path
 
 class CreateUser(APIView):
     permission_classes = [AllowAny]
-    def get(self,request):
-        return Response({'detail':'register user'})
     def post(self,request):
         if User.objects.filter(email=request.data['email']).first() is not None:
             return Response({"error":"Email already used"}, status=400)
@@ -39,29 +40,57 @@ class CreateUser(APIView):
 
 class Login(APIView):
     permission_classes = [AllowAny]
+
     def get(self,request):
         return Response({"user":"user"})
+    
+    @swagger_auto_schema(
+    # method='post',
+    request_body=openapi.Schema(
+        operation_description="Log in with email and password for access token",
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'password': openapi.Schema(type=openapi.TYPE_STRING),
+            'email': openapi.Schema(type=openapi.TYPE_STRING),
+        },
+        required=['name', 'email']
+    ),
+    responses={
+        201: 'Created',
+        400: 'Bad Request',
+    }
+)    
     def post(self,request):
         serializer=LoginSerializer(data=request.data)
         if serializer.is_valid():
             user=serializer.check_password(serializer.validated_data)
             if user is not None:
                 token=Token.objects.get(user=user)
-                return Response({"token":token.key,"id":user.id},status=200)
+                return Response({"token":token.key,"id":user.id},status=201)
             else:
                 return Response({"error":"Invalid login credentials"},status=400)
         return Response({"invalid":"login failed"},status=403   )
 
 
 class CreateProperty(APIView):
+
     authentication_classes=[TokenAuthentication]
     permission_classes=[AllowAny]
     parser_classes=[MultiPartParser,FormParser]
+    @swagger_auto_schema(
+            operation_description="Get all created property",
+            
+            
+    )    
     def get(self,request):
         _s=PropertySerializer(Property.objects.all(),many=True)
         return Response({"properties":_s.data},status=200)
     
-
+    @swagger_auto_schema(
+            operation_description="Create property",
+            
+            
+    )
     def post(self,request):
         _s=CreatePropertySerializer(data=request.data)
         if not request.user.is_superuser:
@@ -109,19 +138,7 @@ class CreateUserProperty(APIView):
         #     raise ValidationError(detail="Invalid Data",code=403)
         document_url=None
         image_list=[]
-        if request.FILES.get('document') is not None:
-            path_dict=create_temp_path(request.FILES['document'])
-            document_path=path_dict['path']
-            document_name=path_dict['name']  
-            document_url=upload_document(document_path,document_name)
-        if request.data.get('images') is not None:
-            for file in request.data.get('images'):
-                path_dict=create_temp_path(file)
-                image_path=path_dict['path']
-                image_name=path_dict['name']
-                image_url=upload_user_property_image(image_path,image_name)
-                image_list.append(image_url)
-        User_Property.objects.create(
+        instance=User_Property.objects.create(
             user=User.objects.get(id=request.data['user_id']),
             property=Property.objects.get(id=request.data['property_id']),
             property_document=document_url,
@@ -131,6 +148,23 @@ class CreateUserProperty(APIView):
             images=image_list if len(image_list)>0 else None
 
         )
+        if request.FILES.get('document') is not None:
+            path_dict=create_temp_path(request.FILES['document'])
+            document_path=path_dict['path']
+            document_name=path_dict['name']  
+            document_url=upload_document(document_path,document_name)
+            instance.property_document=document_url
+            instance.save()
+        if request.data.get('images') is not None:
+            for file in request.data.get('images'):
+                path_dict=create_temp_path(file)
+                image_path=path_dict['path']
+                image_name=path_dict['name']
+                image_url=upload_user_property_image(image_path,image_name)
+                image_list.append(image_url)
+            instance.images=image_list
+            instance.save()
+        instance.save()
         User.objects.get(id=request.data['user_id']).profile.is_property_owner=True
         User.objects.get(id=request.data['user_id']).profile.save()
 
@@ -150,16 +184,11 @@ class GetAllUser(APIView):
             result.append(data)
         return Response({"user":result})
 
-class GetOneUser(APIView):
+class GetOneUser(RetrieveUpdateDestroyAPIView):
     authentication_classes = [TokenAuthentication]
     permission_classes=[IsAdminUser]
-    def get(self,request,pk):
-        user=User.objects.filter(id=pk).first()
-        if user is None:
-            return Response({"error":"User does not exist"},status=404)
-        
-        serializer=UserSerializer(user,many=False)
-        return Response({"data":serializer.data})
+    queryset=User.objects.all()
+    serializer_class=UserSerializer
 
 
 class GetProfile(APIView):
@@ -169,15 +198,15 @@ class GetProfile(APIView):
         user=request.user
         _s=UserSerializer(request.user)
         serializer=ProfileSerializer(UserProfile.objects.get(user=user))
-        return Response({"user":{**_s.data,**serializer.data}})
+        return Response({"data":{**_s.data,**serializer.data}})
 
     def patch(self,request):
         profile_obj=User.objects.get(user=request.user)
-        serializer=User(profile_obj,data=request.data,partial=True)
-        if serializer.is_valid(raise_exception=True):
-            serializer.save()
-            return Response(serializer.data)
-        
+        serializer=UserSerializer(profile_obj,data=request.data,partial=True)
+        if not serializer.is_valid(raise_exception=True):
+            return Response({"error":"Invalid Data"},status=400)
+        serializer.save()
+        return Response({"data":serializer.data},status=200)
 
 class LoginAdmin(APIView):
     
@@ -202,6 +231,9 @@ class LoginAdmin(APIView):
 class GetUserProperty(APIView):
     authentication_classes = [TokenAuthentication]
     permission_classes=[IsAuthenticated]
+    @swagger_auto_schema(
+            operation_description="Get all the properties for logged in user, in the client side"
+    )
     def get(self,request):
         user=request.user 
         user_properties=User_Property.objects.filter(user=user)
@@ -210,29 +242,57 @@ class GetUserProperty(APIView):
     
 
     
-class GetOneUserProperty(APIView):
-    authentication_classes = [TokenAuthentication]
-    permission_classes=[IsAuthenticated]
-    def get(self,request,pk):
-        user_property_obj=None
-        try:
-            user_property_obj=User_Property.objects.get(id=pk)
-        except ObjectDoesNotExist:
-            return Response({"error":"user property does not exist"},status=404)
-            
-        _s=UserPropertySerializer(user_property_obj,many=False)
-        return Response({"data":_s.data})
+# class GetOneUserProperty(APIView):
+#     authentication_classes = [TokenAuthentication]
+#     permission_classes=[IsAuthenticated]
+#     def get(self,request,pk):
+#         user=None
+#         try:
+#             user=User.objects.get(id=pk)
+#         except ObjectDoesNotExist:
+#             return Response({"error":"user does not exist"},status=404)
+#         user_properties=User_Property.objects.filter(user=user)  
+#         _s=UserPropertySerializer(user_properties,many=False)
+#         return Response({"data":_s.data})
+
         
-    def patch(self,request,pk):
-        property_obj=User_Property.objects.get(id=pk)
-        serializer=UserPropertySerializer(property_obj,data=request.data,partial=True)
-        if serializer.is_valid(raise_exception=True):
-            serializer.save()
-            return Response(serializer.data) 
-    # def post(self,request,pk):
-    #     pass
+
+class EditUserProperty(RetrieveUpdateDestroyAPIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes=[IsAdminUser]
+    queryset=User_Property.objects.all()
+    serializer_class=UserPropertySerializer
+    def perform_destroy(self, instance):
+        if instance.property_document != None and instance.property_document !='':
+            document_name_arr=instance.property_document.split('/')
+            document_name=f'property-documents/{document_name_arr[-1]}'
+            delete_files([document_name])
+        
+        if  instance.images is not None:
+            image_list=[f"user-property-images/{image.split('/')[-1]}" for image in instance.images]
+            delete_files(image_list)
+        return super().perform_destroy(instance)
+
 
 
     # helpers
 
+class GetAllUserProperty(ListAPIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes=[IsAdminUser]
+    queryset=User_Property.objects.all()
+    serializer_class=UserPropertySerializer
 
+class EditProperty(RetrieveUpdateDestroyAPIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes=[IsAdminUser]
+    queryset=Property.objects.all()
+    serializer_class=PropertySerializer
+
+    def perform_destroy(self, instance):
+        if instance.image != None and instance.image !='':
+            document_name_arr=instance.image.split('/')
+            document_name=f'property-images/{document_name_arr[-1]}'
+            delete_files([document_name])
+
+        return super().perform_destroy(instance)
