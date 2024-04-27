@@ -279,7 +279,7 @@ class EditUserProperty(RetrieveUpdateDestroyAPIView):
 
 class GetAllUserProperty(ListAPIView):
     authentication_classes = [TokenAuthentication]
-    permission_classes=[IsAdminUser]
+    permission_classes=[IsAuthenticated]
     queryset=User_Property.objects.all()
     serializer_class=UserPropertySerializer
 
